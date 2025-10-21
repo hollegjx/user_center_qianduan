@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev:*)",
+      "Bash(test -d \"E:\\JSProjects\\项目\\myapp\\src\\assets\")",
+      "Bash(mkdir:*)",
+      "Bash(cp:*)",
+      "Bash(dir:*)",
+      "Bash(npm run start:dev:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(curl:*)",
+      "Bash(test:*)",
+      "Bash(rm:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
