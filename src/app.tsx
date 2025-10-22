@@ -150,8 +150,6 @@ export const layout: RunTimeLayoutConfig = ({
  * @doc https://umijs.org/docs/max/request#配置
  */
 export const request: RequestConfig = {
-  // 开发环境：使用代理（见 config/proxy.ts），无需 prefix
-  // 生产环境：暂时也使用 8080 端口
-  prefix: 'http://localhost:8080',
+  timeout : 10000,
   ...errorConfig,
 };
