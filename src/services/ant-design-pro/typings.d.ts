@@ -3,31 +3,34 @@
 
 declare namespace API {
   type CurrentUser = {
-    name?: string;
-    avatar?: string;
-    userid?: string;
-    email?: string;
-    signature?: string;
-    title?: string;
-    group?: string;
-    tags?: { key?: string; label?: string }[];
-    notifyCount?: number;
-    unreadCount?: number;
-    country?: string;
-    access?: string;
-    geographic?: {
-      province?: { label?: string; key?: string };
-      city?: { label?: string; key?: string };
-    };
-    address?: string;
-    phone?: string;
+    id: number;
+    username: string;
+    userAccount: string;
+    avatarUrl: string;
+    gender: number;
+    phone: string;
+    email: string;
+    userStatus: string;
+    createdTime: Date;
+    userRole: number; // 兼容旧字段名
+    role: number;     // 后端实际返回的字段名
   };
 
   type LoginResult = {
+    code?: number; // 后端状态码：0-成功，其他-失败
+    message?: string; // 提示信息
+    data?: CurrentUser; // 用户数据
+    // 兼容旧格式
     status?: string;
     type?: string;
     currentAuthority?: string;
   };
+
+  type RegisterResult = {
+    code?: number; // 后端状态码：0-成功，其他-失败
+    message?: string; // 提示信息
+    data?: number; // 注册成功返回用户ID
+  }
 
   type PageParams = {
     current?: number;
@@ -67,6 +70,13 @@ declare namespace API {
     autoLogin?: boolean;
     type?: string;
   };
+
+  type RegisterParams = {
+    userAccount?: string;
+    userPassword?: string;
+    checkPassword?: string;
+    type?: string;
+  }
 
   type ErrorResponse = {
     /** 业务约定的错误码 */

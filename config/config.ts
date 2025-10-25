@@ -67,6 +67,16 @@ export default defineConfig({
    * @description 一个不错的热更新组件，更新时可以保留 state
    */
   fastRefresh: true,
+
+  /**
+   * @name History 模式配置
+   * @description 配置 history 类型和其他相关配置
+   */
+  history: {
+    type: 'hash',
+  },
+
+
   //============== 以下都是max的插件配置 ===============
   /**
    * @name 数据流插件

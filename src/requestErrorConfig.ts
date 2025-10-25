@@ -90,7 +90,11 @@ export const errorConfig: RequestConfig = {
     (config: RequestOptions) => {
       // 拦截请求配置，进行个性化处理。
       const url = config?.url?.concat();
-      return { ...config, url };
+      return {
+        ...config,
+        url,
+        withCredentials: true, // 携带 cookie
+      };
     },
   ],
 

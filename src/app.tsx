@@ -18,7 +18,7 @@ import '@ant-design/v5-patch-for-react-19';
 
 const isDev = process.env.NODE_ENV === 'development';
 const loginPath = '/user/login';
-
+const whitelist = ['/user/register',loginPath]
 /**
  * @see https://umijs.org/docs/api/runtime-config#getinitialstate
  * */
@@ -30,19 +30,33 @@ export async function getInitialState(): Promise<{
 }> {
   const fetchUserInfo = async () => {
     try {
-      const msg = await queryCurrentUser({
-        skipErrorHandler: true,
-      });
-      return msg.data;
-    } catch (_error) {
-      history.push(loginPath);
+      console.log('正在调用 /api/user/current 接口...');
+      const msg = await queryCurrentUser();
+      console.log('queryCurrentUser 响应:', msg);
+
+      // 适配后端可能直接返回用户对象的情况
+      if (msg.id && msg.userAccount) {
+        console.log('后端直接返回了用户对象');
+        return msg;
+      }
+
+      // 或者标准格式
+      if (msg.data) {
+        console.log('后端返回了包装格式');
+        return msg.data;
+      }
+
+      console.log('未能解析用户信息');
+      return undefined;
+    } catch (error) {
+      console.log('获取用户信息失败:', error);
     }
     return undefined;
   };
   // 如果不是登录页面，执行
   const { location } = history;
   if (
-    ![loginPath, '/user/register', '/user/register-result'].includes(
+    ![loginPath, '/user/register'].includes(
       location.pathname,
     )
   ) {
@@ -70,7 +84,7 @@ export const layout: RunTimeLayoutConfig = ({
       // <SelectLang key="SelectLang" />, // 移除国际化语言切换
     ],
     avatarProps: {
-      src: initialState?.currentUser?.avatar,
+      src: initialState?.currentUser?.avatarUrl,
       title: <AvatarName />,
       render: (_, avatarChildren) => {
         return <AvatarDropdown>{avatarChildren}</AvatarDropdown>;
@@ -82,8 +96,15 @@ export const layout: RunTimeLayoutConfig = ({
     footerRender: () => <Footer />,
     onPageChange: () => {
       const { location } = history;
+
+      // 如果在白名单中，直接返回
+      if(whitelist.includes(location.pathname)){
+        return;
+      }
+
       // 如果没有登录，重定向到 login
       if (!initialState?.currentUser && location.pathname !== loginPath) {
+        console.log('未检测到用户信息，重定向到登录页');
         history.push(loginPath);
       }
     },
@@ -150,6 +171,6 @@ export const layout: RunTimeLayoutConfig = ({
  * @doc https://umijs.org/docs/max/request#配置
  */
 export const request: RequestConfig = {
-  timeout : 10000,
+  timeout: 10000,
   ...errorConfig,
 };

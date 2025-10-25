@@ -25,7 +25,7 @@ import { createStyles } from 'antd-style';
 import React, { useState } from 'react';
 import { flushSync } from 'react-dom';
 import { Footer } from '@/components';
-import { login } from '@/services/ant-design-pro/api';
+import {login, register} from '@/services/ant-design-pro/api';
 import { getFakeCaptcha } from '@/services/ant-design-pro/login';
 import Settings from '../../../../config/defaultSettings';
 import {GITHUB_URL, SYSTEM_LOGO} from "@/constant";
@@ -113,7 +113,7 @@ const LoginMessage: React.FC<{
   );
 };
 
-const Login: React.FC = () => {
+const Register: React.FC = () => {
   const [userLoginState, setUserLoginState] = useState<API.LoginResult>({});
   const [type, setType] = useState<string>('account');
   const { initialState, setInitialState } = useModel('@@initialState');
@@ -133,26 +133,27 @@ const Login: React.FC = () => {
     }
   };
 
-  const handleSubmit = async (values: API.LoginParams) => {
+  const handleSubmit = async (values: API.RegisterParams) => {
+    const{userAccount,userPassword,checkPassword } = values;
+    if(userPassword!== checkPassword){
+      message.error("两次密码输入不一致");
+      return;
+    }
     try {
-      // 登录
-      console.log('开始登录...');
-      const msg = await login({ ...values, type });
-      console.log('登录响应:', msg);
+      const result = await register(values);
+      console.log('注册响应:', result);
 
-      // 判断登录是否成功
-      // 如果返回的对象有 id 和 userAccount，说明登录成功（直接返回用户对象）
-      // 或者如果有 code === 0，也表示成功（标准格式）
-      const isDirectUserObject = msg.id && msg.userAccount;
-      const isStandardFormat = msg.code === 0;
+      // 适配后端响应格式：code === 0 表示成功
+      if (result.code === 0) {
+        const successMessage = result.message || '注册成功！';
+        message.success(successMessage);
 
-      if (isDirectUserObject || (isStandardFormat && msg.data)) {
-        message.success('登录成功！');
-        console.log('登录成功，准备设置用户信息...');
-
-        // 获取用户数据：可能直接就是用户对象，也可能在 data 字段中
-        const loginUser = isDirectUserObject ? msg : msg.data;
-        console.log('从登录响应设置用户信息:', loginUser);
+        // 设置临时用户信息
+        const loginUser = {
+          id: result.data || 0,
+          userAccount: values.userAccount || '',
+          username: values.userAccount || '',
+        };
 
         flushSync(() => {
           setInitialState((s) => ({
@@ -163,32 +164,28 @@ const Login: React.FC = () => {
 
         try {
           await fetchUserInfo();
-          console.log('用户信息获取成功, initialState:', initialState);
         } catch (error) {
-          console.log('获取用户信息失败，使用登录响应数据:', error);
+          console.log('获取用户信息失败，使用注册数据:', error);
         }
 
         // 使用 setTimeout 确保 state 更新完成后再跳转
         setTimeout(() => {
           const urlParams = new URL(window.location.href).searchParams;
           const redirectPath = urlParams.get('redirect') || '/welcome';
-          console.log('准备跳转到:', redirectPath);
 
           // Hash 路由模式下，直接修改 hash
           window.location.hash = `#${redirectPath}`;
-          console.log('已设置 hash 为:', window.location.hash);
         }, 100);
         return;
       }
 
-      // 登录失败
-      const errorMessage = msg.message || '账户或密码错误';
+      // 注册失败
+      const errorMessage = result.message || '注册失败';
       message.error(errorMessage);
-      console.log('登录失败:', msg);
-      setUserLoginState({ status: 'error', type: 'account' });
+      console.log('注册失败:', result);
     } catch (error) {
-      console.log('登录异常:', error);
-      message.error('登录失败，请重试！');
+      console.log('注册异常:', error);
+      message.error('注册失败，请重试！');
     }
   };
   const { status, type: loginType } = userLoginState;
@@ -196,7 +193,7 @@ const Login: React.FC = () => {
   return (
     <div className={styles.container}>
       <Helmet>
-        <title>登录页{Settings.title && ` - ${Settings.title}`}</title>
+        <title>注册页{Settings.title && ` - ${Settings.title}`}</title>
       </Helmet>
       <div
         style={{
@@ -205,22 +202,27 @@ const Login: React.FC = () => {
         }}
       >
         <LoginForm
+          submitter={{
+            searchConfig: {
+              submitText:'注册'
+            }
+          }}
           contentStyle={{
             minWidth: 280,
             maxWidth: '75vw',
           }}
           logo={<img alt="logo" src={SYSTEM_LOGO} />}
-          title="GJX用户中心"
+          title="注册账号"
           subTitle={<a href={GITHUB_URL}>"最好的程序员社区"</a>}
           initialValues={{
             autoLogin: true,
           }}
           actions={[
-            '其他登录方式',
+            '其他注册方式',
             <ActionIcons key="icons" />,
           ]}
           onFinish={async (values) => {
-            await handleSubmit(values as API.LoginParams);
+            await handleSubmit(values as API.RegisterParams);
           }}
         >
 
@@ -258,6 +260,20 @@ const Login: React.FC = () => {
                   },
                 ]}
               />
+              <ProFormText.Password
+                name="checkPassword"
+                fieldProps={{
+                  size: 'large',
+                  prefix: <LockOutlined />,
+                }}
+                placeholder="请确认密码"
+                rules={[
+                  {
+                    required: true,
+                    message: '这是必填项!',
+                  },
+                ]}
+              />
             </div>
           )}
 
@@ -270,17 +286,6 @@ const Login: React.FC = () => {
               marginBottom: 24,
             }}
           >
-            <ProFormCheckbox noStyle name="autoLogin">
-              自动登录
-            </ProFormCheckbox>
-            <a
-              style={{
-                float: 'right',
-              }}
-              href="#/user/register"
-            >
-              注册账号
-            </a>
           </div>
         </LoginForm>
       </div>
@@ -289,4 +294,4 @@ const Login: React.FC = () => {
   );
 };
 
-export default Login;
+export default Register;
