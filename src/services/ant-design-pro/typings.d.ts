@@ -3,17 +3,20 @@
 
 declare namespace API {
   type CurrentUser = {
-    id: number;
-    username: string;
-    userAccount: string;
-    avatarUrl: string;
-    gender: number;
-    phone: string;
-    email: string;
-    userStatus: string;
-    createdTime: Date;
-    userRole: number; // 兼容旧字段名
-    role: number;     // 后端实际返回的字段名
+    id?: number;
+    username?: string;
+    userAccount?: string;
+    avatarUrl?: string | null;
+    gender?: number;
+    phone?: string | null;
+    email?: string | null;
+    userStatus?: string | number;
+    createdTime?: Date;
+    createTime?: string;
+    updateTime?: string | null;
+    isDelete?: number | null;
+    userRole?: number; // 兼容旧字段名
+    role?: number;     // 后端实际返回的字段名
   };
 
   type LoginResult = {

@@ -1,297 +1,177 @@
+import type { ProColumns } from '@ant-design/pro-components';
 import {
-  AlipayCircleOutlined,
-  LockOutlined,
-  MobileOutlined,
-  TaobaoCircleOutlined,
-  UserOutlined,
-  WeiboCircleOutlined,
-} from '@ant-design/icons';
-import {
-  LoginForm,
-  ProFormCaptcha,
-  ProFormCheckbox,
-  ProFormText,
+  EditableProTable,
+  ProCard,
+  ProFormField,
+  ProFormRadio,
 } from '@ant-design/pro-components';
-import {
-  // FormattedMessage, // 移除国际化
-  Helmet,
-  history,
-  // SelectLang, // 移除国际化
-  // useIntl, // 移除国际化
-  useModel,
-} from '@umijs/max';
-import { Alert, App, Tabs } from 'antd';
-import { createStyles } from 'antd-style';
 import React, { useState } from 'react';
-import { flushSync } from 'react-dom';
-import { Footer } from '@/components';
-import {login, register} from '@/services/ant-design-pro/api';
-import { getFakeCaptcha } from '@/services/ant-design-pro/login';
-import Settings from '../../../../config/defaultSettings';
-import {GITHUB_URL, SYSTEM_LOGO} from "@/constant";
+import {searchUsers} from "@/services/ant-design-pro/api";
 
-const useStyles = createStyles(({ token }) => {
-  return {
-    action: {
-      marginLeft: '8px',
-      color: 'rgba(0, 0, 0, 0.2)',
-      fontSize: '24px',
-      verticalAlign: 'middle',
-      cursor: 'pointer',
-      transition: 'color 0.3s',
-      '&:hover': {
-        color: token.colorPrimaryActive,
-      },
-    },
-    lang: {
-      width: 42,
-      height: 42,
-      lineHeight: '42px',
-      position: 'fixed',
-      right: 16,
-      borderRadius: token.borderRadius,
-      ':hover': {
-        backgroundColor: token.colorBgTextHover,
-      },
-    },
-    container: {
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100vh',
-      overflow: 'auto',
-      backgroundImage:
-        "url('https://mdn.alipayobjects.com/yuyan_qk0oxh/afts/img/V-_oS6r-i7wAAAAAAAAAAAAAFl94AQBr')",
-      backgroundSize: '100% 100%',
-    },
-  };
-});
-
-const ActionIcons = () => {
-  const { styles } = useStyles();
-
-  return (
-    <span>
-      <AlipayCircleOutlined
-        key="AlipayCircleOutlined"
-        className={styles.action}
-      />
-      <TaobaoCircleOutlined
-        key="TaobaoCircleOutlined"
-        className={styles.action}
-      />
-      <WeiboCircleOutlined
-        key="WeiboCircleOutlined"
-        className={styles.action}
-      />
-    </span>
-  );
+const waitTime = (time: number = 100) => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(true);
+    }, time);
+  });
 };
 
-// 移除国际化语言切换组件
-// const Lang = () => {
-//   const { styles } = useStyles();
 
-//   return (
-//     <div className={styles.lang} data-lang>
-//       {SelectLang && <SelectLang />}
-//     </div>
-//   );
-// };
 
-const LoginMessage: React.FC<{
-  content: string;
-}> = ({ content }) => {
-  return (
-    <Alert
-      style={{
-        marginBottom: 24,
-      }}
-      message={content}
-      type="error"
-      showIcon
-    />
+export default () => {
+  const [editableKeys, setEditableRowKeys] = useState<React.Key[]>([]);
+  const [dataSource, setDataSource] = useState<readonly API.CurrentUser[]>([]);
+  const [position, setPosition] = useState<'top' | 'bottom' | 'hidden'>(
+    'bottom',
   );
-};
 
-const Register: React.FC = () => {
-  const [userLoginState, setUserLoginState] = useState<API.LoginResult>({});
-  const [type, setType] = useState<string>('account');
-  const { initialState, setInitialState } = useModel('@@initialState');
-  const { styles } = useStyles();
-  const { message } = App.useApp();
-  // const intl = useIntl(); // 移除国际化
-
-  const fetchUserInfo = async () => {
-    const userInfo = await initialState?.fetchUserInfo?.();
-    if (userInfo) {
-      flushSync(() => {
-        setInitialState((s) => ({
-          ...s,
-          currentUser: userInfo,
-        }));
-      });
-    }
-  };
-
-  const handleSubmit = async (values: API.RegisterParams) => {
-    const{userAccount,userPassword,checkPassword } = values;
-    if(userPassword!== checkPassword){
-      message.error("两次密码输入不一致");
-      return;
-    }
-    try {
-      const result = await register(values);
-      console.log('注册响应:', result);
-
-      // 适配后端响应格式：code === 0 表示成功
-      if (result.code === 0) {
-        const successMessage = result.message || '注册成功！';
-        message.success(successMessage);
-
-        // 设置临时用户信息
-        const loginUser = {
-          id: result.data || 0,
-          userAccount: values.userAccount || '',
-          username: values.userAccount || '',
-        };
-
-        flushSync(() => {
-          setInitialState((s) => ({
-            ...s,
-            currentUser: loginUser,
-          }));
-        });
-
-        try {
-          await fetchUserInfo();
-        } catch (error) {
-          console.log('获取用户信息失败，使用注册数据:', error);
-        }
-
-        // 使用 setTimeout 确保 state 更新完成后再跳转
-        setTimeout(() => {
-          const urlParams = new URL(window.location.href).searchParams;
-          const redirectPath = urlParams.get('redirect') || '/welcome';
-
-          // Hash 路由模式下，直接修改 hash
-          window.location.hash = `#${redirectPath}`;
-        }, 100);
-        return;
-      }
-
-      // 注册失败
-      const errorMessage = result.message || '注册失败';
-      message.error(errorMessage);
-      console.log('注册失败:', result);
-    } catch (error) {
-      console.log('注册异常:', error);
-      message.error('注册失败，请重试！');
-    }
-  };
-  const { status, type: loginType } = userLoginState;
+  const columns: ProColumns<API.CurrentUser>[] = [
+    {
+      dataIndex: 'id',
+      valueType: 'indexBorder',
+      width: 50,
+    },
+    {
+      title: '用户名',
+      dataIndex: 'username',
+      copyable: true,
+      width: 50,
+    },
+    {
+      title:'头像',
+      dataIndex: 'avatarUrl',
+      copyable: true,
+      width: 50,
+      render: (_, record) => (
+        <div>
+          <img src={record.avatarUrl || ' '} alt="头像" />
+        </div>
+      )
+    },
+    {
+      title:'性别',
+      dataIndex: 'gender',
+      width: 50,
+    },
+    {
+      title:'电话',
+      dataIndex: 'phone',
+      width: 50,
+    },
+    {
+      title:'邮箱',
+      dataIndex: 'email',
+      width: 50,
+    },
+    {
+      title:'用户状态',
+      dataIndex: 'userStatus',
+      width: 50,
+    },
+    {
+      title:'角色',
+      dataIndex: 'userRole',
+      width: 50,
+    },
+    {
+      title:'创建时间',
+      dataIndex: 'createTime',
+      width: 50,
+    },
+  ];
 
   return (
-    <div className={styles.container}>
-      <Helmet>
-        <title>注册页{Settings.title && ` - ${Settings.title}`}</title>
-      </Helmet>
-      <div
-        style={{
-          flex: '1',
-          padding: '32px 0',
+    <>
+      <EditableProTable<API.CurrentUser>
+        rowKey="id"
+        headerTitle="可编辑表格"
+        maxLength={5}
+        scroll={{
+          x: 960,
         }}
-      >
-        <LoginForm
-          submitter={{
-            searchConfig: {
-              submitText:'注册'
+        recordCreatorProps={
+          position !== 'hidden'
+            ? {
+              position: position as 'top',
+              record: () => ({ id: (Math.random() * 1000000).toFixed(0) }),
             }
-          }}
-          contentStyle={{
-            minWidth: 280,
-            maxWidth: '75vw',
-          }}
-          logo={<img alt="logo" src={SYSTEM_LOGO} />}
-          title="注册账号"
-          subTitle={<a href={GITHUB_URL}>"最好的程序员社区"</a>}
-          initialValues={{
-            autoLogin: true,
-          }}
-          actions={[
-            '其他注册方式',
-            <ActionIcons key="icons" />,
-          ]}
-          onFinish={async (values) => {
-            await handleSubmit(values as API.RegisterParams);
-          }}
-        >
-
-
-          {status === 'error' && loginType === 'account' && (
-            <LoginMessage content="账户或密码错误" />
-          )}
-          {type === 'account' && (
-            <div>
-              <ProFormText
-                name="userAccount"
-                fieldProps={{
-                  size: 'large',
-                  prefix: <UserOutlined />,
-                }}
-                placeholder="请输入账户"
-                rules={[
-                  {
-                    required: true,
-                    message: '请输入用户名!',
-                  },
-                ]}
-              />
-              <ProFormText.Password
-                name="userPassword"
-                fieldProps={{
-                  size: 'large',
-                  prefix: <LockOutlined />,
-                }}
-                placeholder="请输入密码"
-                rules={[
-                  {
-                    required: true,
-                    message: '请输入密码！',
-                  },
-                ]}
-              />
-              <ProFormText.Password
-                name="checkPassword"
-                fieldProps={{
-                  size: 'large',
-                  prefix: <LockOutlined />,
-                }}
-                placeholder="请确认密码"
-                rules={[
-                  {
-                    required: true,
-                    message: '这是必填项!',
-                  },
-                ]}
-              />
-            </div>
-          )}
-
-          {status === 'error' && loginType === 'mobile' && (
-            <LoginMessage content="验证码错误" />
-          )}
-
-          <div
-            style={{
-              marginBottom: 24,
+            : false
+        }
+        loading={false}
+        toolBarRender={() => [
+          <ProFormRadio.Group
+            key="render"
+            fieldProps={{
+              value: position,
+              onChange: (e) => setPosition(e.target.value),
             }}
-          >
-          </div>
-        </LoginForm>
-      </div>
-      <Footer />
-    </div>
+            options={[
+              {
+                label: '添加到顶部',
+                value: 'top',
+              },
+              {
+                label: '添加到底部',
+                value: 'bottom',
+              },
+              {
+                label: '隐藏',
+                value: 'hidden',
+              },
+            ]}
+          />,
+        ]}
+        columns={columns}
+        request={async (params, sort, filter) => {
+          console.log('请求参数:', params, sort, filter);
+          try {
+            const res = await searchUsers();
+            console.log('用户列表响应:', res);
+
+            // 适配后端返回格式：可能直接是数组，也可能包裹在对象中
+            const userList = Array.isArray(res) ? res : (res?.data || []);
+
+            return {
+              data: userList,
+              success: true,
+              total: userList.length,
+            };
+          } catch (error) {
+            console.error('获取用户列表失败:', error);
+            // 临时返回空数据，避免页面崩溃
+            // TODO: 后端实现 /api/user/search 接口后移除此处
+            return {
+              data: [],
+              success: true, // 改为 true，避免一直重试
+              total: 0,
+            };
+          }
+        }}
+        value={dataSource}
+        onChange={setDataSource}
+        editable={{
+          type: 'multiple',
+          editableKeys,
+          onSave: async (rowKey, data, row) => {
+            console.log(rowKey, data, row);
+            await waitTime(2000);
+          },
+          onChange: setEditableRowKeys,
+        }}
+      />
+      <ProCard title="表格数据" headerBordered collapsible defaultCollapsed>
+        <ProFormField
+          ignoreFormItem
+          fieldProps={{
+            style: {
+              width: '100%',
+            },
+          }}
+          mode="read"
+          valueType="jsonCode"
+          text={JSON.stringify(dataSource)}
+        />
+      </ProCard>
+    </>
   );
 };
-
-export default Register;
